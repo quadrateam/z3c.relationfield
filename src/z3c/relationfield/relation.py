@@ -24,7 +24,13 @@ class RelationValue(Persistent):
     @property
     def from_id(self):
         intids = component.getUtility(IIntIds)
-        return intids.getId(self.from_object)
+        try:
+            return intids.getId(self.from_object)
+        except KeyError:
+            # XXX catching this error is not the right thing to do.
+            # instead, breaking a relation by removing an object should
+            # be caught and the relation should be adjusted that way.
+            return None
 
     @property
     def from_path(self):
@@ -86,7 +92,7 @@ class RelationValue(Persistent):
         self.to_id = None
 
     def isBroken(self):
-        return self.to_id is None
+        return self.to_id is None or from_object is None
 
 
 class TemporaryRelationValue(Persistent):
@@ -138,7 +144,7 @@ def create_relation(to_path):
         to_object = object_path.resolve(to_path)
         intids = component.getUtility(IIntIds)
         return RelationValue(intids.getId(to_object))
-    except ValueError:
+    except ValueError, KeyError:
         # create broken relation
         result = RelationValue(None)
         result.broken(to_path)
